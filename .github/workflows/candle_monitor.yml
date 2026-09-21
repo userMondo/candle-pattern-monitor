@@ -1,0 +1,49 @@
+name: Candle Pattern Monitor
+
+on:
+  schedule:
+    # Run every 15 minutes for primary patterns (Engulfing + Doji)
+    - cron: '*/15 * * * *'
+    # Run hourly for all patterns
+    - cron: '0 * * * *'
+    # Run every 4 hours for full scan
+    - cron: '0 */4 * * *'
+    # Also allow manual trigger
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'Comma-separated trading pairs (e.g., BTCUSDT,ETHUSDT)'
+        required: false
+        default: 'BTCUSDT,ETHUSDT,SOLUSDT'
+      interval:
+        description: 'Kline interval (15m, 1h, or 4h)'
+        required: false
+        default: '15m'
+      focus:
+        description: 'Pattern categories to focus on (engulfing,doji, ...)'
+        required: false
+        default: 'engulfing,doji'
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run candle pattern monitor
+        run: |
+          python main.py --symbols "${{ inputs.symbols }}" --interval "${{ inputs.interval }}" --focus "${{ inputs.focus }}"
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
