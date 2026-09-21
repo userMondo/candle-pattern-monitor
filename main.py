@@ -13,7 +13,7 @@ import argparse
 import os
 import sys
 from datetime import datetime, timezone
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 # Add src to path for direct execution
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
@@ -23,9 +23,12 @@ from telegram_bot import TelegramBot
 from patterns import detect_patterns, format_pattern_alert
 
 
-DEFAULT_SYMBOLS = "BTCUSDT,ETHUSDT,SOLUSDT"
+DEFAULT_SYMBOLS = "BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"
 DEFAULT_INTERVAL = "4h"
 DEFAULT_LIMIT = 50
+
+# Primary pattern focus for this monitor: Engulfing + Doji
+DEFAULT_FOCUS = ["engulfing", "doji"]
 
 
 def parse_watchlist(symbols_env: str) -> List[str]:
@@ -41,6 +44,7 @@ def check_symbol(
     symbol: str,
     interval: str,
     limit: int = DEFAULT_LIMIT,
+    focus: Optional[List[str]] = None,
 ) -> Dict:
     """
     Fetch candles for a symbol, detect patterns, send alert if found.
@@ -63,7 +67,7 @@ def check_symbol(
 
         # Only analyze the latest closed candle
         latest_candle = candles[-1]
-        patterns = detect_patterns(candles)
+        patterns = detect_patterns(candles, focus=focus)
 
         if patterns:
             ts = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
@@ -101,7 +105,14 @@ def main():
     parser.add_argument(
         "--interval",
         default=os.getenv("INTERVAL", DEFAULT_INTERVAL),
-        help="Kline interval: 1h or 4h (default: 4h)",
+        help="Kline interval: 15m, 1h, or 4h (default: 4h)",
+    )
+    parser.add_argument(
+        "--focus",
+        default=os.getenv("PATTERN_FOCUS", "engulfing,doji"),
+        help="Pattern categories to focus on (comma-separated): "
+             "engulfing, doji, pinbar, hammer, shooting_star, morning_star, evening_star "
+             "(default: engulfing,doji)",
     )
     parser.add_argument(
         "--limit",
@@ -112,6 +123,7 @@ def main():
 
     args = parser.parse_args()
     symbols = parse_watchlist(args.symbols)
+    focus = [f.strip().lower() for f in args.focus.split(",") if f.strip()] if args.focus else None
 
     if not symbols:
         print("No symbols provided. Exiting.")
@@ -119,6 +131,8 @@ def main():
 
     print(f"Monitoring {len(symbols)} symbols: {symbols}")
     print(f"Interval: {args.interval}")
+    if focus:
+        print(f"Pattern focus: {focus}")
 
     # Initialize clients
     binance_client = BinanceClient()
@@ -127,7 +141,7 @@ def main():
     results = []
     for symbol in symbols:
         print(f"\nChecking {symbol}...")
-        result = check_symbol(binance_client, telegram_bot, symbol, args.interval, args.limit)
+        result = check_symbol(binance_client, telegram_bot, symbol, args.interval, args.limit, focus)
         results.append(result)
 
         if result["patterns_found"]:

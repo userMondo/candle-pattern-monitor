@@ -98,8 +98,8 @@ class BinanceClient:
         Fetch historical candlestick (kline) data from Binance.
 
         Args:
-            symbol: Trading pair, e.g. "BTCUSDT", "ETHUSDT".
-            interval: Kline interval. Supported: "1h", "4h".
+            symbol: Trading pair, e.g. "BTCUSDT", "NEARUSDT".
+            interval: Kline interval. Supported: "15m", "1h", "4h".
             limit: Number of candles to fetch (max 1000).
 
         Returns:
@@ -112,7 +112,7 @@ class BinanceClient:
         if not symbol or not symbol.isalnum():
             raise ValueError(f"Invalid symbol: {symbol}")
 
-        valid_intervals = {"1h", "4h", "1m", "5m", "15m", "1d", "1w", "1M"}
+        valid_intervals = {"15m", "1h", "4h", "1m", "5m", "1d", "1w", "1M"}
         if interval not in valid_intervals:
             raise ValueError(
                 f"Invalid interval '{interval}'. Must be one of: {valid_intervals}"

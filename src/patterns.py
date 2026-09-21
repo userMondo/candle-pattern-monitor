@@ -3,9 +3,10 @@ Candlestick Pattern Detection
 
 Analyzes closed candlesticks for common reversal patterns:
 - Engulfing (Bullish & Bearish)
+- Doji + Engulfing (high-probability reversal combo)
+- Doji (indecision)
 - Hammer / Hanging
 - Shooting Star / Inverted Hammer
-- Doji
 - Pinbar (Bullish & Bearish)
 - Morning Star
 - Evening Star
@@ -310,33 +311,101 @@ def detect_evening_star(candles: List[Candle]) -> Optional[Dict]:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Pattern Manager
-# ---------------------------------------------------------------------------
-
-# Ordered list of pattern detectors — order matters (doji first, then
-# single-candle patterns, then multi-candle patterns, as specificity
-# should be checked before more complex patterns)
-PATTERN_DETECTORS = [
-    ("Doji", detect_doji),
-    ("Pinbar", detect_pinbar),
-    ("Hammer", detect_hammer),
-    ("Shooting Star", detect_shooting_star),
-    ("Engulfing", detect_engulfing),
-    ("Morning Star", detect_morning_star),
-    ("Evening Star", detect_evening_star),
-]
-
-
-def detect_patterns(candles: List[Candle]) -> List[Dict]:
+def detect_doji_engulfing(candles: List[Candle]) -> Optional[Dict]:
     """
-    Run all pattern detectors against a list of candles.
+    Detect Doji + Engulfing pattern.
+
+    A Doji followed by or part of an Engulfing pattern — high-probability
+    reversal signal combining indecision (Doji) with momentum (Engulfing).
+
+    Checks for:
+    1. Doji candle (c0) followed by Bullish Engulfing (c1): Strong trend reversal
+    2. Doji candle (c0) followed by Bearish Engulfing (c1): Strong trend reversal
+
+    Requires at least 2 candles.
+    """
+    if len(candles) < 2:
+        return None
+
+    c0 = candles[-2]
+    c1 = candles[-1]
+
+    # Check if c0 is a doji (small body relative to range)
+    # A doji has open ~= close (body is tiny relative to total range)
+    c0_is_doji = False
+    if c0.total_range > 0:
+        c0_body_ratio = c0.body_size / c0.total_range
+        c0_is_doji = c0_body_ratio < 0.1  # < 10% of range
+
+    if not c0_is_doji:
+        return None
+
+    # Determine the doji's trend context:
+    # If c0 is a perfect doji (open==close), use the candle before it (c_prev)
+    # If c0 has a tiny body, use its own direction
+    c_prev = candles[-3] if len(candles) >= 3 else None
+
+    # Determine trend direction before the doji
+    if c0.body_size > 0:
+        # Near-doji with small body: use its own direction
+        c0_is_bearish = c0.is_bearish
+        c0_is_bullish = c0.is_bullish
+    elif c_prev is not None:
+        # Perfect doji: infer direction from preceding candle
+        c0_is_bearish = c_prev.is_bearish
+        c0_is_bullish = c_prev.is_bullish
+    else:
+        # Perfect doji with no preceding candle: use close vs open of doji range
+        # Fall back to checking if close is at top/bottom of the doji range
+        if abs(c0.close - c0.high) < abs(c0.close - c0.low):
+            c0_is_bearish = True
+            c0_is_bullish = False
+        else:
+            c0_is_bearish = False
+            c0_is_bullish = True
+
+    # Check if c1 is an engulfing candle that breaks away from the doji
+    # C1 should be a strong directional candle with body much larger than doji body
+    if c0_is_bearish and c1.is_bullish:
+        # Doji after downtrend, then bullish engulfing
+        # C1 should fully engulf the doji's range (or at minimum gap up significantly)
+        if c1.close > c0.open and c1.body_size > 0:
+            return {
+                "name": "Doji + Bullish Engulfing",
+                "direction": "bullish",
+                "strength": 3,
+                "description": "Doji after downtrend followed by strong bullish engulfing — high-probability bullish reversal.",
+            }
+
+    elif c0_is_bullish and c1.is_bearish:
+        # Doji after uptrend, then bearish engulfing
+        if c1.close < c0.open and c1.body_size > 0:
+            return {
+                "name": "Doji + Bearish Engulfing",
+                "direction": "bearish",
+                "strength": 3,
+                "description": "Doji after uptrend followed by strong bearish engulfing — high-probability bearish reversal.",
+            }
+
+    return None
+
+
+def detect_patterns(
+    candles: List[Candle],
+    focus: Optional[List[str]] = None,
+) -> List[Dict]:
+    """
+    Run pattern detectors against a list of candles.
 
     Returns the LATEST (most recent) candle's patterns.
     Each detector examines the most recent closed candle(s).
 
     Args:
         candles: List of Candle objects (oldest first).
+        focus: Optional list of pattern category names to limit detection.
+               If None, runs all detectors.
+               Categories: "engulfing", "doji", "pinbar", "hammer", 
+               "shooting_star", "morning_star", "evening_star".
 
     Returns:
         List of detected pattern dicts. Each dict has:
@@ -348,8 +417,21 @@ def detect_patterns(candles: List[Candle]) -> List[Dict]:
     if len(candles) < 2:
         return []
 
+    all_detectors = [
+        ("doji", "Doji", detect_doji),
+        ("doji", "Doji + Engulfing", detect_doji_engulfing),
+        ("pinbar", "Pinbar", detect_pinbar),
+        ("hammer", "Hammer", detect_hammer),
+        ("shooting_star", "Shooting Star", detect_shooting_star),
+        ("engulfing", "Engulfing", detect_engulfing),
+        ("morning_star", "Morning Star", detect_morning_star),
+        ("evening_star", "Evening Star", detect_evening_star),
+    ]
+
     detected = []
-    for pattern_name, detector_fn in PATTERN_DETECTORS:
+    for focus_cat, pattern_name, detector_fn in all_detectors:
+        if focus and focus_cat not in focus:
+            continue
         try:
             result = detector_fn(candles)
             if result:

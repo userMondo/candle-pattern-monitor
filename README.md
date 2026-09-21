@@ -1,15 +1,16 @@
 # Candle Pattern Monitor
 
-A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal patterns on major crypto pairs and sends alerts via Telegram. Hosted entirely on GitHub Actions using Binance public API.
+A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal patterns on major crypto pairs and sends alerts via Telegram. Hosted entirely on GitHub Actions using the Binance public API.
 
 ## Features
 
 - **Zero-cost hosting**: Runs entirely on GitHub Actions free tier
-- **Pattern detection**: Engulfing, Hammer, Shooting Star, Doji, Pinbar, Morning Star, Evening Star
+- **Primary patterns**: Engulfing (Bullish/Bearish) and Doji + Engulfing — with all patterns available via focus config
+- **Full pattern set**: Engrossing, Doji, Doji+Engulfing, Hammer, Shooting Star, Pinbar, Morning Star, Evening Star
 - **Telegram alerts**: Instant notifications with pattern details
 - **Dynamic watchlist**: Configurable via GitHub Actions repository variables
-- **Multiple timeframes**: Supports 1h and 4h intervals
-- **Auto-triggered**: Runs every 4 hours via cron, also supports manual dispatch
+- **Multiple timeframes**: Supports 15m, 1h, and 4h intervals
+- **Auto-triggered**: Runs every 15 minutes (primary patterns), hourly + every 4 hours (full scan), plus manual dispatch
 
 ## Quick Start
 
@@ -30,14 +31,16 @@ A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal pa
 
 2. **Set up GitHub Actions secrets** in your repo Settings → Secrets and Variables → Actions:
    - `TELEGRAM_BOT_TOKEN` — Your Telegram bot token
-   - `TELEGRAM_CHAT_ID` — Your Telegram chat ID
+   - `TELEGRAM_CHAT_ID` — Your Telegram chat ID (see `src/get_chat_id.py` helper)
 
 3. **Configure watchlist** (optional):
-   - Add a repository variable `WATCHLIST_SYMBOLS` (comma-separated, e.g., `BTCUSDT,ETHUSDT,SOLUSDT`)
-   - Default: `BTCUSDT,ETHUSDT,SOLUSDT`
+   - Add a repository variable `WATCHLIST_SYMBOLS` (comma-separated)
+   - Default: `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT`
 
 4. **Run manually or wait for cron:**
-   - The workflow triggers automatically every 4 hours (`0 */4 * * *`)
+   - **15-minute cron**: `*/15 * * * *` — checks Engulfing + Doji patterns
+   - **Hourly cron**: `0 * * * *` — full pattern scan
+   - **4-hour cron**: `0 */4 * * *` — full pattern scan
    - Or trigger manually: Actions tab → candle_monitor → Run workflow
 
 ## Configuration
@@ -46,31 +49,63 @@ A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal pa
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `WATCHLIST_SYMBOLS` | Comma-separated trading pairs | `BTCUSDT,ETHUSDT,SOLUSDT` |
+| `WATCHLIST_SYMBOLS` | Comma-separated trading pairs | `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT` |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot API token | *(required)* |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for alerts | *(required)* |
-| `BINANCE_API_KEY` | Binance API key (optional, for rate limits) | *(optional)* |
+| `INTERVAL` | Default kline interval | `4h` |
+| `PATTERN_FOCUS` | Pattern categories to focus on | `engulfing,doji` |
+| `CANDLE_LIMIT` | Number of candles to fetch per symbol | `50` |
+| `BINANCE_API_KEY` | Binance API key (optional) | *(optional)* |
 
 ### Supported Intervals
 
+- `15m` — 15 minutes (primary monitoring)
 - `1h` — 1 hour
 - `4h` — 4 hours
 
 ### Supported Pairs
 
-Any trading pair available on Binance (e.g., `BTCUSDT`, `ETHUSDT`, `SOLUSDT`, `ADAUSDT`, etc.)
+Any trading pair available on Binance. Monitored pairs:
+- `BTCUSDT` — Bitcoin
+- `NEARUSDT` — NEAR Protocol
+- `ZECUSDT` — Zcash
+- `PAXGUSDT` — Gold-backed token (PAX Gold / Tether Gold proxy)
+
+> Note: HYPE is not listed on Binance. Gold is available as `PAXGUSDT` or `XAUTUSDT`.
+
+### Pattern Focus
+
+Use `--focus` or `PATTERN_FOCUS` env var to limit which patterns are detected:
+
+| Category | Patterns |
+|----------|----------|
+| `engulfing` | Bullish/Bearish Engulfing, Doji + Engulfing |
+| `doji` | Doji, Doji + Engulfing |
+| `pinbar` | Bullish/Bearish Pinbar |
+| `hammer` | Hammer, Hanging Man |
+| `shooting_star` | Shooting Star, Inverted Hammer |
+| `morning_star` | Morning Star |
+| `evening_star` | Evening Star |
+
+Default focus: `engulfing,doji` (primary patterns only).
 
 ## Candlestick Patterns Detected
 
-| Pattern | Type | Description |
-|---------|------|-------------|
-| Engulfing | Reversal | Large candle engulfs previous candle |
-| Hammer | Reversal | Small body near top with long lower wick |
-| Shooting Star | Reversal | Small body near bottom with long upper wick |
-| Doji | Reversal | Open == Close (indecision) |
-| Pinbar | Reversal | Long wick with small body |
-| Morning Star | Reversal | 3-candle bullish reversal pattern |
-| Evening Star | Reversal | 3-candle bearish reversal pattern |
+| Pattern | Category | Direction | Description |
+|---------|----------|-----------|-------------|
+| Bullish Engulfing | engulfing | bullish | Large bullish candle engulfs previous bearish candle |
+| Bearish Engulfing | engulfing | bearish | Large bearish candle engulfs previous bullish candle |
+| Doji | doji | neutral | Open == close (market indecision) |
+| Doji + Bullish Engulfing | doji, engulfing | bullish | Doji after downtrend + strong bullish engulfing (strength: 3/3) |
+| Doji + Bearish Engulfing | doji, engulfing | bearish | Doji after uptrend + strong bearish engulfing (strength: 3/3) |
+| Hammer | hammer | bullish | Small body at top with long lower wick |
+| Hanging Man | hammer | bearish | Hammer pattern in uptrend |
+| Shooting Star | shooting_star | bearish | Small body at bottom with long upper wick |
+| Inverted Hammer | shooting_star | bullish | Shooting star pattern in downtrend |
+| Bullish Pinbar | pinbar | bullish | Long lower wick with small body at top |
+| Bearish Pinbar | pinbar | bearish | Long upper wick with small body at bottom |
+| Morning Star | morning_star | bullish | 3-candle bullish reversal |
+| Evening Star | evening_star | bearish | 3-candle bearish reversal |
 
 ## Project Structure
 
@@ -81,15 +116,18 @@ candle-pattern-monitor/
 │       └── candle_monitor.yml       # GitHub Actions workflow
 ├── src/
 │   ├── __init__.py
-│   ├── patterns.py                  # Pattern detection logic
-│   ├── binance_client.py            # Binance API client
-│   └── telegram_bot.py              # Telegram notification sender
+│   ├── binance_client.py            # Binance klines REST API client
+│   ├── patterns.py                  # 7+ pattern detectors
+│   ├── telegram_bot.py              # Telegram notification client
+│   └── get_chat_id.py               # Helper to find Telegram chat ID
 ├── tests/
 │   ├── __init__.py
-│   └── test_patterns.py            # Pattern detection tests
-├── main.py                          # Entry point
-├── progress_tracker.md              # Development progress tracking
-└── README.md
+│   └── test_patterns.py            # 25 pattern detection tests
+├── .env.example                     # Config template
+├── .gitignore
+├── README.md
+├── main.py                          # CLI entry point
+└── progress_tracker.md
 ```
 
 ## Development
@@ -98,15 +136,22 @@ candle-pattern-monitor/
 
 ```bash
 # Install dependencies
-pip install requests
+pip install requests pytest
 
-# Run pattern tests
+# Run pattern tests (25 tests)
 python -m pytest tests/ -v
 
-# Run monitor manually (requires TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
+# Run monitor manually
 export TELEGRAM_BOT_TOKEN="your_bot_token"
 export TELEGRAM_CHAT_ID="your_chat_id"
-python main.py --symbols BTCUSDT,ETHUSDT --interval 4h
+python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m --focus engulfing,doji
+```
+
+### Finding Your Telegram Chat ID
+
+```bash
+# After messaging your bot with /start:
+python3 src/get_chat_id.py --token YOUR_BOT_TOKEN
 ```
 
 ## License

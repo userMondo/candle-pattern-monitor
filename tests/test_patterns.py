@@ -19,6 +19,7 @@ from patterns import (
     detect_hammer,
     detect_shooting_star,
     detect_doji,
+    detect_doji_engulfing,
     detect_pinbar,
     detect_morning_star,
     detect_evening_star,
@@ -257,3 +258,64 @@ class TestFormatAlert:
         c1 = make_candle(95, 105, 94, 104)
         alert = format_pattern_alert("BTCUSDT", "4h", [], c1)
         assert alert == ""
+
+
+# ---------------------------------------------------------------------------
+# Doji + Engulfing Tests
+# ---------------------------------------------------------------------------
+
+class TestDojiEngulfing:
+    def test_bullish_doji_engulfing(self):
+        """Doji after downtrend followed by bullish engulfing candle."""
+        c0 = make_candle(100, 100, 92, 100)  # doji (open==close)
+        c1 = make_candle(99, 110, 92, 108)   # strong bullish, body >> doji body
+        result = detect_doji_engulfing([c0, c1])
+        assert result is not None
+        assert result["name"] == "Doji + Bullish Engulfing"
+        assert result["direction"] == "bullish"
+        assert result["strength"] == 3
+
+    def test_bearish_doji_engulfing(self):
+        """Doji after uptrend followed by bearish engulfing candle."""
+        c_prev = make_candle(88, 98, 87, 96)  # bullish uptrend
+        c0 = make_candle(96, 98, 94, 96)      # near-doji (small body)
+        c1 = make_candle(96, 98, 80, 82)     # strong bearish
+        result = detect_doji_engulfing([c_prev, c0, c1])
+        assert result is not None
+        assert result["name"] == "Doji + Bearish Engulfing"
+        assert result["direction"] == "bearish"
+
+    def test_no_doji_engulfing_without_doji(self):
+        """No Doji+Engulfing if c0 is not a doji."""
+        c0 = make_candle(100, 110, 90, 108)  # large body, not a doji
+        c1 = make_candle(108, 100, 90, 92)   # bearish engulfing
+        result = detect_doji_engulfing([c0, c1])
+        assert result is None
+
+    def test_no_doji_engulfing_insufficient_candles(self):
+        result = detect_doji_engulfing([make_candle(100, 100, 92, 100)])
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Pattern Focus Tests
+# ---------------------------------------------------------------------------
+
+class TestPatternFocus:
+    def test_focus_engulfing_only(self):
+        """Focus on engulfing only — should not detect doji."""
+        c0 = make_candle(100, 100, 92, 100)  # doji
+        c1 = make_candle(99, 99, 88, 99)    # doji
+        doji_only = make_candle(100, 108, 92, 100)  # pure doji
+        result = detect_patterns([doji_only], focus=["engulfing"])
+        # With focus on engulfing only, doji should not be detected
+        for p in result:
+            assert "Doji" not in p["name"], "Doji should not be in engulfing focus"
+
+    def test_focus_all(self):
+        """With no focus, all patterns should be checked."""
+        c0 = make_candle(100, 100, 95, 96)
+        c1 = make_candle(95, 105, 94, 104)
+        result = detect_patterns([c0, c1], focus=None)
+        assert isinstance(result, list)
+        assert len(result) > 0
