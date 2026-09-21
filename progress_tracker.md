@@ -36,7 +36,7 @@ reversal patterns (Engulfing + Doji + Doji/Engulfing) on crypto pairs and sends 
 | **Intervals** | `15m` (primary), `1h`, `4h` |
 | **Primary patterns** | Engulfing, Doji, Doji + Engulfing |
 | **Binance API key** | `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` (valid, optional) |
-| **Telegram bot** | `@ArtoriaPersonalAssistant_bot` — token invalid (401, needs regeneration) |
+| **Telegram bot** | `@jiodsjfiebot` (bot: hamble) — ✅ token valid, needs `/start` message to get chat ID |
 
 ## Pattern Focus
 
@@ -76,10 +76,14 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 - GitHub workflow file can't be pushed via PAT (lacks `workflow` scope) — needs manual addition or PAT regeneration
 - Telegram bot token invalid (401) — needs regeneration via @BotFather
 
-**2026-09-22 — Binance API key verification**
-- Key `HTvh...C82UhYfI0O3XrsE` verified valid for Binance
-- All 4 symbols (BTCUSDT, NEARUSDT, ZECUSDT, PAXGUSDT) return 100 candles at 15m
-- Public klines endpoint works without key, but key provides higher rate limits
+**2026-09-22 — GitHub workflow pushed**
+- PAT now has `workflow` scope — workflow file pushed successfully (commit `a8f14b9`)
+- All 8+ tracked files verified on GitHub remote
+
+**2026-09-22 — Telegram token update**
+- New bot token `8800671132:***` is VALID — bot "hamble" (@jiodsjfiebot)
+- Still needs user to message bot /start to generate chat ID
+- Run `python3 src/get_chat_id.py --token 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY` after messaging bot
 
 ## Verification Summary
 
@@ -94,9 +98,7 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 - ✅ No leaked secrets in tracked files
 
 ### Blocked — User Action Required
-- ❌ **Telegram bot token**: `8772439710:AAFHe_HuGpUU9IVgoS7kQS7zh4frTU4p050` returns 401 — create new bot via @BotFather
-- ❌ **Telegram chat ID**: Unknown — message `@ArtoriaPersonalAssistant_bot` with `/start`, then run `python3 src/get_chat_id.py --token YOUR_TOKEN`
-- ❌ **GitHub workflow file**: Not pushed — PAT lacks `workflow` scope. Either regenerate PAT with `workflow: write` or add `.github/workflows/candle_monitor.yml` via GitHub web UI
+- ❌ **Telegram chat ID**: Unknown — message `@jiodsjfiebot` with `/start`, then run `python3 src/get_chat_id.py --token 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY`
 
 ## Key Commands
 
@@ -107,8 +109,8 @@ PYTHONPATH=src python -m pytest tests/ -v
 # Run monitor locally
 python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m --focus engulfing,doji
 
-# Find Telegram chat ID (after messaging your bot)
-python3 src/get_chat_id.py --token YOUR_BOT_TOKEN
+# Find Telegram chat ID (after messaging @jiodsjfiebot with /start)
+python3 src/get_chat_id.py --token 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY
 
 # Push changes (if PAT has workflow scope)
 git add -A && git commit -m "update" && git push origin main

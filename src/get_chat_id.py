@@ -1,87 +1,61 @@
-"""
-Helper script to find your Telegram chat ID.
-
-Run this after you've sent a message to your bot (from your Telegram account).
+"""Helper: get your Telegram chat ID after messaging your bot.
 
 Usage:
-    python3 src/get_chat_id.py --token YOUR_BOT_TOKEN
+    python3 src/get_chat_id.py --token 123456789:AAFe.... --timeout 10
+
+Steps:
+1. Create a bot via @BotFather -> get token
+2. Open Telegram, search for your bot, send /start
+3. Run this script with the token
 """
-import argparse
 import requests
+import argparse
 import sys
-import os
 
-def get_chat_id(token: str) -> None:
-    """Fetch chat ID from Telegram getUpdates."""
-    url = f"https://api.telegram.org/bot{token}/getUpdates"
-
-    try:
-        resp = requests.get(url, timeout=30)
-        data = resp.json()
-
-        if not data.get("ok"):
-            print(f"❌ Error: {data.get('description', 'Unknown error')}")
-            print("   - The bot token may be invalid or revoked.")
-            print("   - Create a new bot via @BotFather and try again.")
-            return
-
-        updates = data.get("result", [])
-        if not updates:
-            print("⚠️  No updates found.")
-            print("   - You need to send a message to your bot first.")
-            print("   - Open Telegram, find your bot, and send any message (e.g., '/start').")
-            print("   - Then run this script again.")
-            return
-
-        print("Found chat(s):")
-        for update in updates:
-            chat = update.get("message", {}).get("chat", {})
-            if chat:
-                chat_id = chat.get("id")
-                first_name = chat.get("first_name", "N/A")
-                username = chat.get("username", "N/A")
-                chat_type = chat.get("type", "N/A")
-                print(f"  Chat ID: {chat_id}")
-                print(f"  Name: {first_name}")
-                print(f"  Username: @{username}")
-                print(f"  Type: {chat_type}")
-
-    except requests.RequestException as e:
-        print(f"❌ Network error: {e}")
-
-
-def test_bot(token: str) -> bool:
-    """Test if the bot token is valid."""
-    url = f"https://api.telegram.org/bot{token}/getMe"
-    try:
-        resp = requests.get(url, timeout=30)
-        data = resp.json()
-        if data.get("ok"):
-            bot = data.get("result", {})
-            print(f"✅ Bot is valid!")
-            print(f"  Name: {bot.get('first_name', 'N/A')}")
-            print(f"  Username: @{bot.get('username', 'N/A')}")
-            print(f"  ID: {bot.get('id', 'N/A')}")
-            return True
-        else:
-            print(f"❌ Bot token is invalid: {data.get('description', 'Unknown')}")
-            return False
-    except requests.RequestException as e:
-        print(f"❌ Network error: {e}")
-        return False
-
+def get_chat_id(token: str, timeout: int = 30) -> str:
+    """Fetch chat ID from Telegram getUpdates API."""
+    api = f"https://api.telegram.org/bot{token}"
+    resp = requests.get(f"{api}/getMe", timeout=10)
+    if resp.status_code != 200:
+        print(f"Bot token invalid: {resp.status_code}")
+        return ""
+    me = resp.json()["result"]
+    print(f"Bot: {me['first_name']} (@{me['username']})")
+    
+    resp = requests.get(f"{api}/getUpdates?timeout={timeout}", timeout=timeout+5)
+    if resp.status_code != 200:
+        print(f"Failed to get updates: {resp.status_code}")
+        return ""
+    
+    updates = resp.json().get("result", [])
+    if not updates:
+        print("No messages received. Send /start to your bot first, then re-run.")
+        return ""
+    
+    chat_ids = set()
+    for update in updates:
+        chat = update.get("message", {}).get("chat", {})
+        if chat:
+            chat_ids.add(chat["id"])
+    
+    if chat_ids:
+        chat_id = list(chat_ids)[0]
+        print(f"Chat ID found: {chat_id}")
+        return str(chat_id)
+    else:
+        print("Chat ID not found in updates.")
+        return ""
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Find your Telegram chat ID")
-    parser.add_argument("--token", default=os.getenv("TELEGRAM_BOT_TOKEN"),
-                        help="Telegram bot token (or set TELEGRAM_BOT_TOKEN env var)")
+    parser = argparse.ArgumentParser(description="Get Telegram chat ID")
+    parser.add_argument("--token", required=True, help="Bot token from @BotFather")
+    parser.add_argument("--timeout", type=int, default=10, help="GetUpdates timeout in seconds")
     args = parser.parse_args()
-
-    if not args.token:
-        print("Usage: python3 src/get_chat_id.py --token YOUR_BOT_TOKEN")
-        print("Or set TELEGRAM_BOT_TOKEN environment variable.")
+    
+    chat_id = get_chat_id(args.token, args.timeout)
+    if chat_id:
+        print(f"\nUse this in your config:")
+        print(f"TELEGRAM_BOT_TOKEN={args.token}")
+        print(f"TELEGRAM_CHAT_ID={chat_id}")
+    else:
         sys.exit(1)
-
-    test_bot(args.token)
-    print()
-    get_chat_id(args.token)
