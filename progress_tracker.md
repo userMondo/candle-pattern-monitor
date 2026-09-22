@@ -19,7 +19,7 @@ all 13+ reversal patterns on crypto pairs and sends Telegram alerts.
 - [x] `main.py` — CLI entry point with `--interval`, `--symbols`, `--focus` args
 - [x] `.github/workflows/candle_monitor.yml` — GitHub Actions cron (15m, hourly, 4h)
 - [x] `.env.example` — Configuration template with placeholders
-- [x] `tests/test_patterns.py` — 27 unit tests (all passing)
+- [x] `tests/test_patterns.py` — 29 unit tests (all passing)
 - [x] `README.md` — Full documentation
 
 ### In Progress
@@ -35,9 +35,9 @@ all 13+ reversal patterns on crypto pairs and sends Telegram alerts.
 | **Symbols** | `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT` |
 | **Intervals** | `15m` (primary), `1h`, `4h` |
 | **Pattern focus** | All 13+ patterns by default (Engulfing, Doji, Doji+Engulfing, Hammer, Hanging Man, Shooting Star, Inverted Hammer, Bull/Bear Pinbar, Morning Star, Evening Star) |
-| **Binance API key** | `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` ✅ valid, verified live |
-| **Telegram bot** | `@jiodsjfiebot` (hamble) — ✅ token valid, chat ID: `6580853770` |
-| **Telegram alerts** | ✅ LIVE — test message + Doji alert sent to chat 6580853770 |
+| **Binance API key** | `<REDACTED>` — ✅ valid, verified live |
+| **Telegram bot** | `@jiodsjfiebot` (hamble) — ✅ token valid, chat ID: `<REDACTED>` |
+| **Telegram alerts** | ✅ LIVE — test message + pattern alerts sent |
 
 ## Pattern Focus
 
@@ -130,14 +130,14 @@ python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m
 # Or focus on specific patterns only
 python main.py --symbols BTCUSDT --interval 15m --focus engulfing,doji
 
-# Find Telegram chat ID (already known: 6580853770)
-# Token: 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY
-# Chat ID: 6580853770
+# Find Telegram chat ID (already discovered)
+# Token: <redacted> (hamble / @jiodsjfiebot)
+# Chat ID: <redacted>
 
 # Add to GitHub secrets via UI: Settings → Secrets & Variables → Actions
-#   TELEGRAM_BOT_TOKEN = 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY
-#   TELEGRAM_CHAT_ID = 6580853770
-#   BINANCE_API_KEY = HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE
+#   TELEGRAM_BOT_TOKEN = <your_token>
+#   TELEGRAM_CHAT_ID = <your_chat_id>
+#   BINANCE_API_KEY = <your_key>
 
 # Push changes (if PAT has workflow scope)
 git add -A && git commit -m "update" && git push origin main
