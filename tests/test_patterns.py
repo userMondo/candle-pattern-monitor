@@ -319,3 +319,23 @@ class TestPatternFocus:
         result = detect_patterns([c0, c1], focus=None)
         assert isinstance(result, list)
         assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
+# Closed Candle Tests
+# ---------------------------------------------------------------------------
+
+class TestClosedCandle:
+    def test_candle_is_closed(self):
+        """Candle with close_time in the past is marked as closed."""
+        import time
+        past_time = int(time.time() * 1000) - 60000  # 1 minute ago
+        c = make_candle(100, 105, 95, 102, close_time=past_time)
+        assert c.is_closed is True
+
+    def test_candle_not_closed(self):
+        """Candle with close_time in the future is marked as not closed."""
+        import time
+        future_time = int(time.time() * 1000) + 600000  # 10 minutes in future
+        c = make_candle(100, 105, 95, 102, close_time=future_time)
+        assert c.is_closed is False

@@ -65,7 +65,15 @@ def check_symbol(
             result["error"] = f"Not enough candles ({len(candles)}) for pattern detection"
             return result
 
-        # Only analyze the latest closed candle
+        # CRITICAL: Filter to only fully-closed candles.
+        # The last candle in Binance's response may still be forming (unclosed).
+        closed_candles = [c for c in candles if c.is_closed]
+        if len(closed_candles) < 3:
+            result["error"] = f"Not enough closed candles ({len(closed_candles)}) for pattern detection"
+            return result
+
+        # Use only closed candles for pattern detection
+        candles = closed_candles
         latest_candle = candles[-1]
         patterns = detect_patterns(candles, focus=focus)
 

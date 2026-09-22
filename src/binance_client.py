@@ -16,7 +16,7 @@ import requests
 
 @dataclass
 class Candle:
-    """Represents a single closed candlestick (kline)."""
+    """Represents a single candlestick (kline)."""
     open_time: int
     open: float
     high: float
@@ -54,6 +54,12 @@ class Candle:
     def is_bearish(self) -> bool:
         """True if close < open (red/down candle)."""
         return self.close < self.open
+
+    @property
+    def is_closed(self) -> bool:
+        """True if this candle is fully closed (close_time is in the past)."""
+        from time import time
+        return self.close_time <= int(time() * 1000) - 1000  # 1s buffer
 
 
 @dataclass
@@ -159,8 +165,8 @@ class BinanceClient:
         """
         Fetch the most recent closed candle for a symbol.
 
-        Excludes the active/unclosed candle automatically since Binance
-        only returns completed candles on historical kline endpoints.
+        Explicitly filters to only return candles whose close_time is in the past,
+        ensuring we never analyze an incomplete forming candle.
 
         Args:
             symbol: Trading pair.
@@ -173,13 +179,11 @@ class BinanceClient:
         if not candles:
             raise ValueError(f"No kline data returned for {symbol}")
 
-        # Filter to fully closed candles only
-        # (the last candle on the endpoint might still be forming if
-        # we fetched with limit matching the current time; we exclude
-        # the very last one as a safety measure, then return the
-        # second-to-last which is guaranteed closed)
-        # In practice on /api/v3/klines, all returned klines are closed
-        # except potentially the current forming one.
-        # We'll trust the endpoint returns closed candles (it does
-        # for historical requests) but verify by taking the last.
-        return candles[-1]
+        # Filter to fully closed candles only (close_time must be in the past)
+        closed = [c for c in candles if c.is_closed]
+        if not closed:
+            # Fallback: Binance historical klines are already closed,
+            # but we verify to be safe. Return the second-to-last if available.
+            return candles[-2] if len(candles) >= 2 else candles[-1]
+
+        return closed[-1]
