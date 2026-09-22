@@ -12,15 +12,15 @@ on:
   workflow_dispatch:
     inputs:
       symbols:
-        description: 'Comma-separated trading pairs (e.g., BTCUSDT,ETHUSDT)'
+        description: 'Comma-separated trading pairs (e.g., BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT)'
         required: false
-        default: 'BTCUSDT,ETHUSDT,SOLUSDT'
+        default: 'BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT'
       interval:
         description: 'Kline interval (15m, 1h, or 4h)'
         required: false
         default: '15m'
       focus:
-        description: 'Pattern categories to focus on (engulfing,doji, ...)'
+        description: 'Pattern categories (engulfing, doji, pinbar, hammer, shooting_star, morning_star, evening_star)'
         required: false
         default: 'engulfing,doji'
 

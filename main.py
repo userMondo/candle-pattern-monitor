@@ -40,7 +40,7 @@ def parse_watchlist(symbols_env: str) -> List[str]:
 
 def check_symbol(
     client: BinanceClient,
-    bot: TelegramBot,
+    bot: Optional[TelegramBot],
     symbol: str,
     interval: str,
     limit: int = DEFAULT_LIMIT,
@@ -69,12 +69,10 @@ def check_symbol(
         latest_candle = candles[-1]
         patterns = detect_patterns(candles, focus=focus)
 
-        if patterns:
+        if patterns and bot is not None:
             ts = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
             timestamp_str = ts.strftime("%Y-%m-%d %H:%M:%S UTC")
 
-            # Use the simple send_candle_alert for first pattern
-            # or format_pattern_alert for all patterns
             alert_text = format_pattern_alert(
                 symbol=symbol,
                 interval=interval,
@@ -85,6 +83,19 @@ def check_symbol(
 
             sent = bot.send_message(alert_text, parse_mode="Markdown")
             result["alert_sent"] = sent
+            result["patterns_found"] = [p["name"] for p in patterns]
+        elif patterns and bot is None:
+            # Patterns found but no bot configured
+            ts = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
+            timestamp_str = ts.strftime("%Y-%m-%d %H:%M:%S UTC")
+            alert_text = format_pattern_alert(
+                symbol=symbol,
+                interval=interval,
+                patterns=patterns,
+                candle=latest_candle,
+                timestamp=timestamp_str,
+            )
+            print(f"  📋 Patterns found (no Telegram): {alert_text[:100]}...")
             result["patterns_found"] = [p["name"] for p in patterns]
         else:
             result["patterns_found"] = []
@@ -136,7 +147,12 @@ def main():
 
     # Initialize clients
     binance_client = BinanceClient()
-    telegram_bot = TelegramBot()
+    try:
+        telegram_bot = TelegramBot()
+    except ValueError as e:
+        print(f"⚠️  Telegram config issue: {e}")
+        print("   Pattern detection will still run, but alerts won't be sent.")
+        telegram_bot = None
 
     results = []
     for symbol in symbols:
