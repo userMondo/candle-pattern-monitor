@@ -24,11 +24,11 @@ from patterns import detect_patterns, format_pattern_alert
 
 
 DEFAULT_SYMBOLS = "BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"
-DEFAULT_INTERVAL = "4h"
+DEFAULT_INTERVAL = os.getenv("INTERVAL", "15m")  # Primary: 15m, also run 1h and 4h
 DEFAULT_LIMIT = 50
 
-# Primary pattern focus for this monitor: Engulfing + Doji
-DEFAULT_FOCUS = ["engulfing", "doji"]
+# Default focus: monitor ALL pattern types (no filtering)
+DEFAULT_FOCUS = None  # None means detect all patterns
 
 
 def parse_watchlist(symbols_env: str) -> List[str]:
@@ -128,10 +128,10 @@ def main():
     )
     parser.add_argument(
         "--focus",
-        default=os.getenv("PATTERN_FOCUS", "engulfing,doji"),
-        help="Pattern categories to focus on (comma-separated): "
-             "engulfing, doji, pinbar, hammer, shooting_star, morning_star, evening_star "
-             "(default: engulfing,doji)",
+        default=os.getenv("PATTERN_FOCUS", ""),
+        help="Pattern categories to focus on (comma-separated). "
+             "Empty = detect ALL patterns. Options: "
+             "engulfing, doji, pinbar, hammer, shooting_star, morning_star, evening_star",
     )
     parser.add_argument(
         "--limit",

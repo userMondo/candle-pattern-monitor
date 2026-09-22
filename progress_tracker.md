@@ -6,7 +6,7 @@
 
 ## Overview
 Build a zero-cost, 24/7 candlestick pattern monitoring system on GitHub Actions that detects
-reversal patterns (Engulfing + Doji + Doji/Engulfing) on crypto pairs and sends Telegram alerts.
+all 13+ reversal patterns on crypto pairs and sends Telegram alerts.
 
 ## Status: Active Development
 
@@ -34,15 +34,14 @@ reversal patterns (Engulfing + Doji + Doji/Engulfing) on crypto pairs and sends 
 |---------|-------|
 | **Symbols** | `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT` |
 | **Intervals** | `15m` (primary), `1h`, `4h` |
-| **Primary patterns** | Engulfing, Doji, Doji + Engulfing |
+| **Pattern focus** | All 13+ patterns by default (Engulfing, Doji, Doji+Engulfing, Hammer, Hanging Man, Shooting Star, Inverted Hammer, Bull/Bear Pinbar, Morning Star, Evening Star) |
 | **Binance API key** | `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` ✅ valid, verified live |
 | **Telegram bot** | `@jiodsjfiebot` (hamble) — ✅ token valid, chat ID: `6580853770` |
 | **Telegram alerts** | ✅ LIVE — test message + Doji alert sent to chat 6580853770 |
 
 ## Pattern Focus
 
-Default focus: `engulfing,doji` — only detects Engulfing and Doji patterns.
-Use `--focus all` or omit `--focus` to detect all patterns.
+Default focus: **all patterns** (no filtering). Use `--focus` or `PATTERN_FOCUS` env var to limit which patterns are detected.
 
 | Category | Patterns |
 |----------|----------|
@@ -98,7 +97,10 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 ## Verification Summary
 
 ### Passed
-- ✅ 27/27 pytest tests pass
+- ✅ 29/29 pytest tests pass (27 original + 2 new closed-candle tests)
+- ✅ All 13+ pattern detectors verified (Engulfing, Doji, Doji+Engulfing, Pinbar, Hammer, Hanging Man, Shooting Star, Inverted Hammer, Morning Star, Evening Star)
+- ✅ All-patterns monitoring active by default (no `--focus` = detect everything)
+- ✅ Pattern focus filtering works correctly (engulfing-only, doji-only, etc.)
 - ✅ Binance API: BTCUSDT, NEARUSDT, ZECUSDT, PAXGUSDT at 15m/1h/4h (live data)
 - ✅ Pattern detection: Engulfing, Doji, Doji+Engulfing (tested via unit tests + live data)
 - ✅ TelegramBot: code verified (live test message sent)
@@ -120,8 +122,11 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 # Run tests
 PYTHONPATH=src python -m pytest tests/ -v
 
-# Run monitor locally
-python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m --focus engulfing,doji
+# Run monitor locally (all patterns by default)
+python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m
+
+# Or focus on specific patterns only
+python main.py --symbols BTCUSDT --interval 15m --focus engulfing,doji
 
 # Find Telegram chat ID (already known: 6580853770)
 # Token: 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY

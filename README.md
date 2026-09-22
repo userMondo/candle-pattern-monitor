@@ -5,8 +5,7 @@ A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal pa
 ## Features
 
 - **Zero-cost hosting**: Runs entirely on GitHub Actions free tier
-- **Primary patterns**: Engulfing (Bullish/Bearish) and Doji + Engulfing — with all patterns available via focus config
-- **Full pattern set**: Engrossing, Doji, Doji+Engulfing, Hammer, Shooting Star, Pinbar, Morning Star, Evening Star
+- **Patterns**: All 13+ pattern detectors active by default (Engulfing, Doji, Hammer, Shooting Star, Pinbar, Morning/Evening Star, Doji+Engulfing) — filter with `--focus` if needed
 - **Telegram alerts**: Instant notifications with pattern details
 - **Dynamic watchlist**: Configurable via GitHub Actions repository variables
 - **Multiple timeframes**: Supports 15m, 1h, and 4h intervals
@@ -38,9 +37,9 @@ A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal pa
    - Default: `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT`
 
 4. **Run manually or wait for cron:**
-   - **15-minute cron**: `*/15 * * * *` — checks Engulfing + Doji patterns
-   - **Hourly cron**: `0 * * * *` — full pattern scan
-   - **4-hour cron**: `0 */4 * * *` — full pattern scan
+   - **15-minute cron**: `*/15 * * * *` — all patterns on 15m interval (every 15 min)
+   - **Hourly cron**: `0 * * * *` — all patterns on 1h interval
+   - **4-hour cron**: `0 */4 * * *` — all patterns on 4h interval
    - Or trigger manually: Actions tab → candle_monitor → Run workflow
 
 ## Configuration
@@ -52,8 +51,8 @@ A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal pa
 | `WATCHLIST_SYMBOLS` | Comma-separated trading pairs | `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT` |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot API token | *(required)* |
 | `TELEGRAM_CHAT_ID` | Telegram chat ID for alerts | *(required)* |
-| `INTERVAL` | Default kline interval | `4h` |
-| `PATTERN_FOCUS` | Pattern categories to focus on | `engulfing,doji` |
+|| `INTERVAL` | Default kline interval | `15m` |
+|| `PATTERN_FOCUS` | Pattern categories (leave empty for ALL) | *(empty = all patterns)* |
 | `CANDLE_LIMIT` | Number of candles to fetch per symbol | `50` |
 | `BINANCE_API_KEY` | Binance API key (optional) | *(optional)* |
 
@@ -73,9 +72,7 @@ Any trading pair available on Binance. Monitored pairs:
 
 > Note: HYPE is not listed on Binance. Gold is available as `PAXGUSDT` or `XAUTUSDT`.
 
-### Pattern Focus
-
-Use `--focus` or `PATTERN_FOCUS` env var to limit which patterns are detected:
+Default focus: **all patterns** (no filtering). Use `--focus` to limit which patterns are detected:
 
 | Category | Patterns |
 |----------|----------|
@@ -117,12 +114,12 @@ candle-pattern-monitor/
 ├── src/
 │   ├── __init__.py
 │   ├── binance_client.py            # Binance klines REST API client
-│   ├── patterns.py                  # 7+ pattern detectors
+│   ├── patterns.py                  # 13+ pattern detectors including Doji+Engulfing
 │   ├── telegram_bot.py              # Telegram notification client
 │   └── get_chat_id.py               # Helper to find Telegram chat ID
 ├── tests/
 │   ├── __init__.py
-│   └── test_patterns.py            # 25 pattern detection tests
+│   └── test_patterns.py            # 29 pattern detection tests
 ├── .env.example                     # Config template
 ├── .gitignore
 ├── README.md
@@ -138,13 +135,13 @@ candle-pattern-monitor/
 # Install dependencies
 pip install requests pytest
 
-# Run pattern tests (25 tests)
+# Run pattern tests (29 tests)
 python -m pytest tests/ -v
 
-# Run monitor manually
+# Run monitor manually (all patterns by default)
 export TELEGRAM_BOT_TOKEN="your_bot_token"
 export TELEGRAM_CHAT_ID="your_chat_id"
-python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m --focus engulfing,doji
+python main.py --symbols BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT --interval 15m
 ```
 
 ### Finding Your Telegram Chat ID

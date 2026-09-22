@@ -2,17 +2,16 @@ name: Candle Pattern Monitor
 
 on:
   schedule:
-    # Run every 15 minutes for primary patterns (Engulfing + Doji)
+    # Run every 15 minutes — primary monitoring (all patterns)
     - cron: '*/15 * * * *'
-    # Run hourly for all patterns
+    # Run hourly — all patterns
     - cron: '0 * * * *'
-    # Run every 4 hours for full scan
+    # Run every 4 hours — full scan
     - cron: '0 */4 * * *'
-    # Also allow manual trigger
   workflow_dispatch:
     inputs:
       symbols:
-        description: 'Comma-separated trading pairs (e.g., BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT)'
+        description: 'Comma-separated trading pairs'
         required: false
         default: 'BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT'
       interval:
@@ -20,9 +19,9 @@ on:
         required: false
         default: '15m'
       focus:
-        description: 'Pattern categories (engulfing, doji, pinbar, hammer, shooting_star, morning_star, evening_star)'
+        description: 'Pattern categories (empty = ALL patterns)'
         required: false
-        default: 'engulfing,doji'
+        default: ''
 
 jobs:
   monitor:
