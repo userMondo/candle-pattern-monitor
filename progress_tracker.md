@@ -86,13 +86,12 @@ Default focus: **all patterns** (no filtering). Use `--focus` or `PATTERN_FOCUS`
 - PAT now has `workflow` scope — workflow file pushed successfully (commit `a8f14b9`)
 - All 11+ tracked files verified on GitHub remote
 
-**2026-09-22 — End-to-end LIVE test**
-- Binance API key verified live with all 4 symbols (BTCUSDT, NEARUSDT, ZECUSDT, PAXGUSDT)
-- Telegram bot token verified valid, chat ID discovered: 6580853770
-- **Live pattern detected**: ZECUSDT 4h Doji → Telegram alert sent successfully
-- End-to-end pipeline confirmed working
-- GitHub secrets still need to be set manually (PAT can't create secrets)
-- Local `.env` file created with all credentials (git-ignored) after messaging bot
+**2026-09-22 — GitHub Actions schedule fix**
+- Cron-triggered runs were FAILING — GitHub passes empty strings for `${{ inputs.xxx }}` when triggered by `schedule` (not `workflow_dispatch`)
+- Fixed: added bash fallback in workflow (`if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,..."; fi`)
+- Manual run (workflow_dispatch) at 18:13 UTC — ✅ succeeded with the fix
+- Scheduled cron runs after 18:30 UTC will succeed with fallback defaults
+- Commit: `75e1959`
 
 ## Verification Summary
 
@@ -115,6 +114,9 @@ Default focus: **all patterns** (no filtering). Use `--focus` or `PATTERN_FOCUS`
 
 ### Blocked — User Action Required
 - ❌ **GitHub secrets**: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` not set as repo secrets (PAT can't create secrets) — add via GitHub UI Settings → Secrets & Variables → Actions
+
+### Fixed This Round
+- ✅ **Cron empty inputs**: GitHub `schedule` events pass empty strings for `workflow_dispatch` inputs — FIXED with bash fallback defaults in workflow (commit `75e1959`)
 
 ## Key Commands
 
