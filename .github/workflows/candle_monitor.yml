@@ -42,7 +42,16 @@ jobs:
 
       - name: Run candle pattern monitor
         run: |
-          python main.py --symbols "${{ inputs.symbols }}" --interval "${{ inputs.interval }}" --focus "${{ inputs.focus }}"
+          # Use input values or fall back to defaults (cron runs get empty strings)
+          SYMBOLS="${{ inputs.symbols }}"
+          INTERVAL="${{ inputs.interval }}"
+          FOCUS="${{ inputs.focus }}"
+
+          # Apply defaults if inputs are empty (cron-triggered runs)
+          if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"; fi
+          if [ -z "$INTERVAL" ]; then INTERVAL="15m"; fi
+
+          python main.py --symbols "$SYMBOLS" --interval "$INTERVAL" --focus "$FOCUS"
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
