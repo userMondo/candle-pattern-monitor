@@ -35,7 +35,7 @@ reversal patterns (Engulfing + Doji + Doji/Engulfing) on crypto pairs and sends 
 | **Symbols** | `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT` |
 | **Intervals** | `15m` (primary), `1h`, `4h` |
 | **Primary patterns** | Engulfing, Doji, Doji + Engulfing |
-| **Binance API key** | `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` (valid, optional) |
+| **Binance API key** | `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` ✅ valid, verified live |
 | **Telegram bot** | `@jiodsjfiebot` (bot: hamble) — ✅ token valid, needs `/start` message to get chat ID |
 
 ## Pattern Focus
@@ -76,9 +76,15 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 - GitHub workflow file can't be pushed via PAT (lacks `workflow` scope) — needs manual addition or PAT regeneration
 - Telegram bot token invalid (401) — needs regeneration via @BotFather
 
+**2026-09-22 — Binance API key verified + live pattern scan**
+- Key `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` verified valid (200 on exchangeInfo, key accepted for klines)
+- 4 symbols verified live: BTCUSDT, NEARUSDT, ZECUSDT, PAXGUSDT at 15m/1h/4h
+- **Live scan result**: NEARUSDT 4h — Doji + Bullish Engulfing (3/3) + Bullish Engulfing (2/3) detected
+- `.env` file created locally with all credentials (not committed to git)
+
 **2026-09-22 — GitHub workflow pushed**
 - PAT now has `workflow` scope — workflow file pushed successfully (commit `a8f14b9`)
-- All 8+ tracked files verified on GitHub remote
+- All 11+ tracked files verified on GitHub remote
 
 **2026-09-22 — Telegram token update**
 - New bot token `8800671132:***` is VALID — bot "hamble" (@jiodsjfiebot)
