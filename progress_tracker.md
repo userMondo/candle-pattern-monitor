@@ -36,7 +36,8 @@ reversal patterns (Engulfing + Doji + Doji/Engulfing) on crypto pairs and sends 
 | **Intervals** | `15m` (primary), `1h`, `4h` |
 | **Primary patterns** | Engulfing, Doji, Doji + Engulfing |
 | **Binance API key** | `HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE` ✅ valid, verified live |
-| **Telegram bot** | `@jiodsjfiebot` (bot: hamble) — ✅ token valid, needs `/start` message to get chat ID |
+| **Telegram bot** | `@jiodsjfiebot` (hamble) — ✅ token valid, chat ID: `6580853770` |
+| **Telegram alerts** | ✅ LIVE — test message + Doji alert sent to chat 6580853770 |
 
 ## Pattern Focus
 
@@ -86,10 +87,13 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 - PAT now has `workflow` scope — workflow file pushed successfully (commit `a8f14b9`)
 - All 11+ tracked files verified on GitHub remote
 
-**2026-09-22 — Telegram token update**
-- New bot token `8800671132:***` is VALID — bot "hamble" (@jiodsjfiebot)
-- Still needs user to message bot /start to generate chat ID
-- Run `python3 src/get_chat_id.py --token 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY` after messaging bot
+**2026-09-22 — End-to-end LIVE test**
+- Binance API key verified live with all 4 symbols (BTCUSDT, NEARUSDT, ZECUSDT, PAXGUSDT)
+- Telegram bot token verified valid, chat ID discovered: 6580853770
+- **Live pattern detected**: ZECUSDT 4h Doji → Telegram alert sent successfully
+- End-to-end pipeline confirmed working
+- GitHub secrets still need to be set manually (PAT can't create secrets)
+- Local `.env` file created with all credentials (git-ignored) after messaging bot
 
 ## Verification Summary
 
@@ -104,7 +108,7 @@ Use `--focus all` or omit `--focus` to detect all patterns.
 - ✅ No leaked secrets in tracked files
 
 ### Blocked — User Action Required
-- ❌ **Telegram chat ID**: Unknown — message `@jiodsjfiebot` with `/start`, then run `python3 src/get_chat_id.py --token 8800671132:AAHQnXSnhOJ3HVkZje-G9unj9OyG_XsZwuY`
+- ❌ **GitHub secrets**: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` not set in repo secrets (PAT can't create secrets)
 
 ## Key Commands
 
