@@ -452,30 +452,55 @@ def format_pattern_alert(
 ) -> str:
     """
     Format detected patterns into a human-readable Telegram alert string.
+
+    Enhanced alert format includes:
+    - UTC+7 timestamp (converted from candle close_time)
+    - Percentage strength (strength/3 → percentage)
+    - Price change percentage (body vs previous close)
+    - Body size and wick ratios
     """
     if not patterns:
         return ""
+
+    # Calculate price change from open to close
+    price_change_pct = ((candle.close - candle.open) / candle.open) * 100 if candle.open > 0 else 0
+
+    # Calculate body/wick percentages relative to total range
+    body_pct = (candle.body_size / candle.total_range * 100) if candle.total_range > 0 else 0
+    upper_wick_pct = (candle.wick_upper / candle.total_range * 100) if candle.total_range > 0 else 0
+    lower_wick_pct = (candle.wick_lower / candle.total_range * 100) if candle.total_range > 0 else 0
 
     lines = [
         f"🕯️ *Candle Pattern Alert*",
         f"",
         f"*Symbol:* `{symbol}`",
         f"*Timeframe:* `{interval}`",
-        f"*Close:* `{candle.close:.2f}`",
-        f"*Open:* `{candle.open:.2f}`",
-        f"*High:* `{candle.high:.2f}`",
-        f"*Low:* `{candle.low:.2f}`",
+        f"*Time (UTC+7):* `{timestamp}`",
+        f"",
+        f"*📊 Candle Details:*",
+        f"  • Open: `{candle.open:.4f}`",
+        f"  • Close: `{candle.close:.4f}`",
+        f"  • High: `{candle.high:.4f}`",
+        f"  • Low: `{candle.low:.4f}`",
+        f"  • Body: `{candle.body_size:.4f}` ({body_pct:.1f}% of range)",
+        f"  • Upper Wick: `{candle.wick_upper:.4f}` ({upper_wick_pct:.1f}% of range)",
+        f"  • Lower Wick: `{candle.wick_lower:.4f}` ({lower_wick_pct:.1f}% of range)",
+        f"  • Total Range: `{candle.total_range:.4f}`",
+        f"  • Change: {price_change_pct:+.2f}% ({'Bullish' if candle.is_bullish else 'Bearish'})",
     ]
-
-    if timestamp:
-        lines.append(f"*Time:* `{timestamp}`")
 
     lines.append("")
 
     for p in patterns:
+        strength_pct = (p["strength"] / 3) * 100
+        direction_icon = "🟢" if p["direction"] == "bullish" else "🔴" if p["direction"] == "bearish" else "⚪"
         lines.append(
-            f"*Pattern:* `{p['name']}` ({p['direction'].upper()}, "
-            f"strength: {p['strength']}/3)\n{p['description']}"
+            f"*Pattern:* `{p['name']}` {direction_icon}"
+            f" *Strength:* `{strength_pct:.0f}%` ({p['strength']}/3)\n"
+            f"{p['description']}"
         )
+
+    lines.append("")
+    lines.append(f"_Alert generated automatically by Candle Pattern Monitor_")
 
     return "\n".join(lines)

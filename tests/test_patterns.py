@@ -248,11 +248,34 @@ class TestFormatAlert:
         patterns = [
             {"name": "Bullish Engulfing", "direction": "bullish", "strength": 2, "description": "Test desc"},
         ]
-        alert = format_pattern_alert("BTCUSDT", "4h", patterns, c1)
+        alert = format_pattern_alert("BTCUSDT", "4h", patterns, c1, timestamp="2024-01-01 12:00:00 UTC+7 (05:00 UTC)")
         assert "BTCUSDT" in alert
         assert "4h" in alert
         assert "Bullish Engulfing" in alert
-        assert "104.00" in alert
+        assert "104" in alert
+        assert "UTC+7" in alert
+        assert "67%" in alert  # strength 2/3 = 67%
+
+    def test_format_with_strength_percentage(self):
+        """Test that percentage strength is rendered correctly."""
+        c1 = make_candle(95, 105, 94, 104)
+        # Strength 3 = 100%
+        patterns = [{"name": "Test", "direction": "bullish", "strength": 3, "description": "Strong"}]
+        alert = format_pattern_alert("BTCUSDT", "15m", patterns, c1, timestamp="2024-01-01 12:00:00 UTC+7")
+        assert "100%" in alert
+
+        # Strength 1 = 33%
+        patterns = [{"name": "Test", "direction": "bearish", "strength": 1, "description": "Weak"}]
+        alert = format_pattern_alert("BTCUSDT", "15m", patterns, c1, timestamp="2024-01-01 12:00:00 UTC+7")
+        assert "33%" in alert
+
+    def test_format_with_price_change(self):
+        """Test that price change percentage is included."""
+        c1 = make_candle(95, 105, 94, 104)  # close 104, open 95 → +9.47%
+        patterns = [{"name": "Test", "direction": "bullish", "strength": 1, "description": "Test"}]
+        alert = format_pattern_alert("BTCUSDT", "15m", patterns, c1, timestamp="2024-01-01 12:00:00 UTC+7")
+        assert "Change:" in alert
+        assert "%" in alert  # should have a percentage
 
     def test_empty_patterns_returns_empty(self):
         c1 = make_candle(95, 105, 94, 104)

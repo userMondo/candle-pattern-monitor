@@ -12,7 +12,7 @@ Usage:
 import argparse
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
 
 # Add src to path for direct execution
@@ -78,8 +78,9 @@ def check_symbol(
         patterns = detect_patterns(candles, focus=focus)
 
         if patterns and bot is not None:
-            ts = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
-            timestamp_str = ts.strftime("%Y-%m-%d %H:%M:%S UTC")
+            ts_utc = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
+            ts_local = ts_utc + timedelta(hours=7)  # UTC+7
+            timestamp_str = ts_local.strftime("%Y-%m-%d %H:%M:%S UTC+7 (%H:%M UTC)")
 
             alert_text = format_pattern_alert(
                 symbol=symbol,
@@ -94,8 +95,9 @@ def check_symbol(
             result["patterns_found"] = [p["name"] for p in patterns]
         elif patterns and bot is None:
             # Patterns found but no bot configured
-            ts = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
-            timestamp_str = ts.strftime("%Y-%m-%d %H:%M:%S UTC")
+            ts_utc = datetime.fromtimestamp(latest_candle.close_time / 1000, tz=timezone.utc)
+            ts_local = ts_utc + timedelta(hours=7)  # UTC+7
+            timestamp_str = ts_local.strftime("%Y-%m-%d %H:%M:%S UTC+7 (%H:%M UTC)")
             alert_text = format_pattern_alert(
                 symbol=symbol,
                 interval=interval,
