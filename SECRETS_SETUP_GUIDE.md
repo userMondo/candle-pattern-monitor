@@ -19,7 +19,7 @@ For EACH of the 3 secrets below:
 3. Click **Add secret**
 4. Repeat for the next secret
 
-### Step 3: Get Values from Your Local .env
+### Step 3: Get Values From Your Local .env
 Your local `.env` file has the correct values already configured. To read them:
 
 ```bash
@@ -27,12 +27,7 @@ cd /home/mondo/candle-pattern-monitor
 cat .env
 ```
 
-You'll see:
-```
-TELEGRAM_BOT_TOKEN=8800671132:***
-TELEGRAM_CHAT_ID=6580853770
-BINANCE_API_KEY=HTvhNcdSX04zn3H1ilJv8bTaJSr8AKyn6GFbiZT76rRfNXKYpC82UhYfI0O3XrsE
-```
+You'll see the correct values for all 3 secrets.
 
 Use these exact values for the corresponding GitHub secrets.
 
@@ -46,9 +41,13 @@ After adding all 3 secrets, trigger a manual run:
 6. The "Run candle pattern monitor" step should show pattern detection + "Alert sent: True"
 
 ## Why No Alerts Before
-- **GitHub PAT** used has `contents: write` and `workflow` scope but **NOT `secrets: write`** — could not set secrets via API
+- **Wrong Telegram token**: An old/revoked token was in `.env` — FIXED, correct token `8800671132:` now used
+- **GitHub PAT** used has `contents: write` and `workflow` scope but **NOT `secrets: write`** — could not set GitHub secrets via API
 - **Cron empty inputs**: GitHub `schedule` events pass empty strings for `${{ inputs.xxx }}` — FIXED (commit `75e1959`)
-- **Missing secrets**: Without `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`, the monitor runs but skips Telegram
+- **Missing GitHub secrets**: Without `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` set as repo secrets, the GitHub Actions cron runs but skips Telegram alerts
+
+## Root Cause of No Alerts
+The cron workflow succeeds (exit 0), but `main.py` is designed to **continue without alerting** if Telegram credentials are missing or invalid. The workflow can't send alerts because the secrets are not in GitHub's encrypted secret store — they need to be added manually via the GitHub UI.
 
 ## Cron Schedule (all times UTC)
 | Schedule | Frequency | UTC | Your Time (UTC+7) |
