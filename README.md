@@ -37,7 +37,7 @@ A zero-cost, 24/7 candlestick pattern monitoring system that detects reversal pa
    - Default: `BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT`
 
 4. **Run manually or wait for cron:**
-   - **15-minute cron**: `*/15 * * * *` — all patterns on 15m interval (every 15 min)
+   - Every 15 minutes (`*/15 * * * *`) — all patterns on 15m interval (note: GitHub fires within ~±15 min window, not at exact minute marks)
    - **Hourly cron**: `0 * * * *` — all patterns on 1h interval
    - **4-hour cron**: `0 */4 * * *` — all patterns on 4h interval
    - Or trigger manually: Actions tab → candle_monitor → Run workflow

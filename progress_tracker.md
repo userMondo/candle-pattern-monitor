@@ -89,8 +89,9 @@ Default focus: **all patterns** (no filtering). Use `--focus` or `PATTERN_FOCUS`
 **2026-09-22 — GitHub Actions schedule fix**
 - Cron-triggered runs were FAILING — GitHub passes empty strings for `${{ inputs.xxx }}` when triggered by `schedule` (not `workflow_dispatch`)
 - Fixed: added bash fallback in workflow (`if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,..."; fi`)
+- After fix: ALL scheduled runs succeed ✅ (runs #21-29 all success)
+- **Note**: GitHub Actions cron is NOT precise — jobs fire within a ±15 min window, not at exact minute marks (`*/15 * * * *` fires near :00/:15/:30/:45 but not always exactly on)
 - Manual run (workflow_dispatch) at 18:13 UTC — ✅ succeeded with the fix
-- Scheduled cron runs after 18:30 UTC will succeed with fallback defaults
 - Commit: `75e1959`
 
 ## Verification Summary
