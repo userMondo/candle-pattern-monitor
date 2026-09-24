@@ -9,4 +9,3 @@ venv/
 src-worker/node_modules/
 src-worker/.wrangler/
 src-worker/.vite/
-src-worker/wrangler.toml

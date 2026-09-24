@@ -1,13 +1,10 @@
 name: Candle Pattern Monitor
 
+# SCHEDULE DISABLED — migrated to Cloudflare Workers
+# See src-worker/ for the always-on TypeScript implementation
+# This workflow is kept for manual testing only
+
 on:
-  schedule:
-    # Pattern monitoring — every 15 minutes (GitHub fires within ~±15 min window)
-    - cron: '*/15 * * * *'
-    # Pattern monitoring — hourly
-    - cron: '0 * * * *'
-    # Pattern monitoring — every 4 hours
-    - cron: '0 */4 * * *'
   workflow_dispatch:
     inputs:
       symbols:
@@ -47,8 +44,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
         run: |
-          # Fallback defaults for cron-triggered runs (inputs come as empty strings)
+          # Fallback defaults for manual runs
           if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"; fi
           if [ -z "$INTERVAL" ]; then INTERVAL="15m"; fi
 
-          python main.py --symbols "$SYMBOLS" --interval "$INTERVAL" --focus "$FOCUS"
+          PYTHONPATH=src python main.py --symbols "$SYMBOLS" --interval "$INTERVAL" --focus "$FOCUS"

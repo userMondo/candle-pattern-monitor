@@ -1,9 +1,9 @@
-name: Hourly Price Report
+# SCHEDULE DISABLED — migrated to Cloudflare Workers
+# The hourly price report now runs as a Cloudflare Worker cron trigger
+# See src-worker/ for the always-on TypeScript implementation
+# This workflow is kept for manual testing only
 
 on:
-  schedule:
-    # Price report — every hour at :05 (staggered from pattern monitoring)
-    - cron: '5 * * * *'
   workflow_dispatch:
     inputs:
       symbols:
@@ -29,11 +29,10 @@ jobs:
       - name: Run price report
         env:
           SYMBOLS: ${{ inputs.symbols }}
-          PRICE_REPORT: true
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
         run: |
           if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"; fi
 
-          python main.py --symbols "$SYMBOLS" --interval "1h" --price-report
+          PYTHONPATH=src python main.py --symbols "$SYMBOLS" --interval "1h" --price-report
