@@ -16,10 +16,10 @@ all 13+ reversal patterns on crypto pairs and sends Telegram alerts.
 - [x] `src/patterns.py` — Pattern detection (13 pattern types including Engulfing, Doji, Doji+Engulfing)
 - [x] `src/telegram_bot.py` — Telegram Bot API client
 - [x] `src/get_chat_id.py` — Helper to find Telegram chat ID
-- [x] `main.py` — CLI entry point with `--interval`, `--symbols`, `--focus` args
-- [x] `.github/workflows/candle_monitor.yml` — GitHub Actions cron (15m, hourly, 4h)
-- [x] `.env.example` — Configuration template with placeholders
-- [x] `tests/test_patterns.py` — 29 unit tests (all passing)
+- [x] `tests/test_patterns.py` — 31 unit tests (all passing)
+- [x] `.github/workflows/candle_monitor.yml` — Pattern monitoring cron (*/15, hourly, 4h)
+- [x] `.github/workflows/price_report.yml` — Hourly price report cron (5 * * * *)
+- [x] `SECRETS_SETUP_GUIDE.md` — Step-by-step GitHub secrets setup guide
 - [x] `README.md` — Full documentation
 
 ### In Progress
@@ -36,7 +36,7 @@ all 13+ reversal patterns on crypto pairs and sends Telegram alerts.
 | **Intervals** | `15m` (primary), `1h`, `4h` |
 | **Pattern focus** | All 13+ patterns by default (Engulfing, Doji, Doji+Engulfing, Hammer, Hanging Man, Shooting Star, Inverted Hammer, Bull/Bear Pinbar, Morning Star, Evening Star) |
 | **Binance API key** | `<REDACTED>` — ✅ valid, verified live |
-| **Telegram bot** | `@jiodsjfiebot` (hamble) — ✅ token valid, chat ID: `<REDACTED>` |
+| **Telegram bot** | `@jiodsjfiebot` (Aritoria) — ✅ token valid |
 | **Telegram alerts** | ✅ LIVE — test message + pattern alerts sent |
 
 ## Pattern Focus
@@ -86,27 +86,26 @@ Default focus: **all patterns** (no filtering). Use `--focus` or `PATTERN_FOCUS`
 - PAT now has `workflow` scope — workflow file pushed successfully (commit `a8f14b9`)
 - All 11+ tracked files verified on GitHub remote
 
-**2026-09-23 — Alert message upgrade**
+**2026-09-24 — Alert message upgrade + hourly price report**
 - Enhanced `format_pattern_alert` with:
   - UTC+7 timestamp (converted from candle close_time, also shows UTC)
   - Percentage strength (strength/3 → %, e.g. 67% for 2/3, 100% for 3/3, 33% for 1/3)
   - Price change percentage (open→close)
   - Body size and wick percentages relative to total range
   - Direction icons (green/red for bullish/bearish)
-- Updated both timestamp locations in `main.py` (bot and no-bot paths)
-- Added 2 new tests for alert format verification
+- Added `format_price_report()` — hourly price summary for all watched symbols
+- Added `--price-report` CLI flag and `run_price_report()` function
+- Added separate workflow `price_report.yml` — runs at `5 * * * *` (hourly, staggered)
+- Added Binance endpoint fallbacks (`api.binance.com` + `api.binance.us`) to handle HTTP 451 IP blocking on GitHub Actions
+- Added `get_price_ticker()` and `get_server_time()` methods to `BinanceClient`
 - All 31/31 tests pass
 
 **2026-09-23 — Security cleanup**
+- Root cause found: GitHub secrets NOT set → workflow skips Telegram
+- Wrong Telegram token in `.env` (old/revoked) → FIXED, correct token verified
+- Binance API returning HTTP 451 (IP blocked) from GitHub Actions → FIXED with endpoint fallback
 - Redacted all real secrets from `TELEGRAM_SETUP_GUIDE.md` and `progress_tracker.md`
-- Fixed `.env` with correct Telegram token (was using old/revoked one)
 - Created `SECRETS_SETUP_GUIDE.md` — step-by-step guide for adding GitHub secrets
-- Cron-triggered runs were FAILING — GitHub passes empty strings for `${{ inputs.xxx }}` when triggered by `schedule` (not `workflow_dispatch`)
-- Fixed: added bash fallback in workflow (`if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,..."; fi`)
-- After fix: ALL scheduled runs succeed ✅ (runs #21-29 all success)
-- **Note**: GitHub Actions cron is NOT precise — jobs fire within a ±15 min window, not at exact minute marks (`*/15 * * * *` fires near :00/:15/:30/:45 but not always exactly on)
-- Manual run (workflow_dispatch) at 18:13 UTC — ✅ succeeded with the fix
-- Commit: `75e1959`
 
 ## Verification Summary
 
