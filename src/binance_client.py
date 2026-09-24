@@ -9,7 +9,7 @@ Endpoint: https://api.binance.com/api/v3/klines
 
 import os
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import requests
 
@@ -72,13 +72,20 @@ class BinanceClient:
     """
     Lightweight client for Binance public REST API (klines endpoint).
 
+    Uses multiple endpoint fallbacks to handle rate limiting and IP blocks
+    (GitHub Actions IPs are sometimes blocked by Binance with HTTP 451).
+
     Usage:
         client = BinanceClient()
         candles = client.get_klines("BTCUSDT", "4h", limit=50)
         latest = candles[-1]  # most recent closed candle
     """
 
-    BASE_URL = "https://api.binance.com/api/v3"
+    # Multiple Binance-compatible endpoints as fallbacks
+    BASE_URLS = [
+        "https://api.binance.com/api/v3",
+        "https://api.binance.us/api/v3",  # US Binance
+    ]
     DEFAULT_TIMEOUT = 30
 
     def __init__(self, api_key: Optional[str] = None):
@@ -94,6 +101,23 @@ class BinanceClient:
         if self.api_key:
             self.session.headers.update({"X-MBX-APIKEY": self.api_key})
 
+    @property
+    def BASE_URL(self) -> str:
+        """Use first URL in fallbacks for backward compatibility."""
+        return self.BASE_URLS[0]
+
+    def get_server_time(self) -> int:
+        """Fetch Binance server time (with fallback URLs)."""
+        for base_url in self.BASE_URLS:
+            try:
+                url = f"{base_url}/time"
+                resp = self.session.get(url, timeout=self.DEFAULT_TIMEOUT)
+                resp.raise_for_status()
+                return resp.json()["serverTime"]
+            except Exception:
+                continue
+        raise ConnectionError("All Binance endpoints failed for server time")
+
     def get_klines(
         self,
         symbol: str,
@@ -102,6 +126,9 @@ class BinanceClient:
     ) -> List[Candle]:
         """
         Fetch historical candlestick (kline) data from Binance.
+
+        Tries multiple Binance endpoints for resilience against IP-based
+        blocking (HTTP 451) on GitHub Actions runners.
 
         Args:
             symbol: Trading pair, e.g. "BTCUSDT", "NEARUSDT".
@@ -113,7 +140,7 @@ class BinanceClient:
 
         Raises:
             ValueError: If symbol or interval is invalid.
-            requests.HTTPError: If the API returns an error.
+            ConnectionError: If all Binance endpoints fail.
         """
         if not symbol or not symbol.isalnum():
             raise ValueError(f"Invalid symbol: {symbol}")
@@ -127,39 +154,47 @@ class BinanceClient:
         if limit > 1000:
             limit = 1000
 
-        url = f"{self.BASE_URL}/klines"
         params = {
             "symbol": symbol,
             "interval": interval,
             "limit": limit,
         }
 
-        response = self.session.get(url, params=params, timeout=self.DEFAULT_TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
+        # Try each Binance endpoint
+        last_error = None
+        for base_url in self.BASE_URLS:
+            try:
+                url = f"{base_url}/klines"
+                response = self.session.get(url, params=params, timeout=self.DEFAULT_TIMEOUT)
+                if response.status_code == 451:
+                    # IP blocked — try next endpoint
+                    last_error = f"HTTP 451 (blocked)"
+                    continue
+                response.raise_for_status()
+                data = response.json()
 
-        candles = []
-        for k in data:
-            # Binance kline array format:
-            # [0] Open time
-            # [1] Open
-            # [2] High
-            # [3] Low
-            # [4] Close
-            # [5] Volume
-            # [6] Close time
-            # ... (remaining fields ignored)
-            candles.append(Candle(
-                open_time=int(k[0]),
-                open=float(k[1]),
-                high=float(k[2]),
-                low=float(k[3]),
-                close=float(k[4]),
-                volume=float(k[5]),
-                close_time=int(k[6]),
-            ))
+                candles = []
+                for k in data:
+                    candles.append(Candle(
+                        open_time=int(k[0]),
+                        open=float(k[1]),
+                        high=float(k[2]),
+                        low=float(k[3]),
+                        close=float(k[4]),
+                        volume=float(k[5]),
+                        close_time=int(k[6]),
+                    ))
 
-        return candles
+                return candles
+
+            except Exception as e:
+                last_error = str(e)
+                continue
+
+        # All endpoints failed
+        raise ConnectionError(
+            f"All Binance endpoints failed for {symbol} ({interval}): {last_error}"
+        )
 
     def get_latest_closed_candle(self, symbol: str, interval: str = "4h") -> Candle:
         """
@@ -187,3 +222,43 @@ class BinanceClient:
             return candles[-2] if len(candles) >= 2 else candles[-1]
 
         return closed[-1]
+
+    def get_price_ticker(self, symbol: str) -> Dict:
+        """
+        Fetch the current spot price for a symbol (ticker/24hr).
+
+        Args:
+            symbol: Trading pair, e.g. "BTCUSDT".
+
+        Returns:
+            Dict with price, price_change_pct, high_24h, low_24h, volume.
+
+        Raises:
+            ConnectionError: If all Binance endpoints fail.
+        """
+        last_error = None
+        for base_url in self.BASE_URLS:
+            try:
+                url = f"{base_url}/ticker/24hr"
+                resp = self.session.get(url, params={"symbol": symbol},
+                                        timeout=self.DEFAULT_TIMEOUT)
+                if resp.status_code == 451:
+                    last_error = f"HTTP 451 (blocked)"
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                return {
+                    "symbol": symbol,
+                    "price": float(data["lastPrice"]),
+                    "price_change_pct": float(data["priceChangePercent"]),
+                    "high_24h": float(data["highPrice"]),
+                    "low_24h": float(data["lowPrice"]),
+                    "volume": float(data["volume"]),
+                }
+            except Exception as e:
+                last_error = str(e)
+                continue
+
+        raise ConnectionError(
+            f"All Binance endpoints failed for {symbol} ticker: {last_error}"
+        )

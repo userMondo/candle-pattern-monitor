@@ -1,0 +1,39 @@
+name: Hourly Price Report
+
+on:
+  schedule:
+    # Price report — every hour at :05 (staggered from pattern monitoring)
+    - cron: '5 * * * *'
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'Comma-separated trading pairs'
+        required: false
+        default: 'BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT'
+
+jobs:
+  price_report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Run price report
+        env:
+          SYMBOLS: ${{ inputs.symbols }}
+          PRICE_REPORT: true
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
+        run: |
+          if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"; fi
+
+          python main.py --symbols "$SYMBOLS" --interval "1h" --price-report

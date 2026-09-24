@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from binance_client import BinanceClient, Candle
 from telegram_bot import TelegramBot
-from patterns import detect_patterns, format_pattern_alert
+from patterns import detect_patterns, format_pattern_alert, format_price_report
 
 
 DEFAULT_SYMBOLS = "BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"
@@ -116,6 +116,42 @@ def check_symbol(
     return result
 
 
+def run_price_report(binance_client: BinanceClient, telegram_bot: Optional[TelegramBot], symbols: List[str]) -> int:
+    """Fetch 24h price tickers for all symbols and send as a Telegram report.
+
+    This is the hourly price report mode — always runs and sends regardless
+    of whether any pattern is detected.
+    """
+    from datetime import datetime, timezone, timedelta
+    ts_utc = datetime.now(timezone.utc)
+    ts_local = ts_utc + timedelta(hours=7)
+    timestamp_str = ts_local.strftime("%Y-%m-%d %H:%M:%S UTC+7 (%H:%M UTC)")
+
+    tickers = []
+    for symbol in symbols:
+        try:
+            ticker = binance_client.get_price_ticker(symbol)
+            tickers.append(ticker)
+            print(f"  ✅ {symbol}: ${ticker['price']:.4f} ({ticker['price_change_pct']:+.2f}%)")
+        except Exception as e:
+            print(f"  ❌ {symbol}: {e}")
+
+    if not tickers:
+        print("No tickers fetched. Exiting.")
+        return 1
+
+    report = format_price_report(tickers, timestamp=timestamp_str)
+    print(f"\n{report}")
+
+    if telegram_bot is not None:
+        sent = telegram_bot.send_message(report, parse_mode="Markdown")
+        print(f"\n📨 Price report sent: {sent}")
+    else:
+        print("\n⚠️  No Telegram bot configured — price report not sent.")
+
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="Candle Pattern Monitor")
     parser.add_argument(
@@ -141,6 +177,12 @@ def main():
         default=int(os.getenv("CANDLE_LIMIT", str(DEFAULT_LIMIT))),
         help="Number of candles to fetch per symbol (default: 50)",
     )
+    parser.add_argument(
+        "--price-report",
+        action="store_true",
+        default=os.getenv("PRICE_REPORT", "").lower() in ("true", "1", "yes"),
+        help="Send hourly price report for all watched symbols (instead of/in addition to pattern alerts)",
+    )
 
     args = parser.parse_args()
     symbols = parse_watchlist(args.symbols)
@@ -154,6 +196,8 @@ def main():
     print(f"Interval: {args.interval}")
     if focus:
         print(f"Pattern focus: {focus}")
+    if args.price_report:
+        print("Mode: Price Report (hourly ticker summary)")
 
     # Initialize clients
     binance_client = BinanceClient()
@@ -161,8 +205,12 @@ def main():
         telegram_bot = TelegramBot()
     except ValueError as e:
         print(f"⚠️  Telegram config issue: {e}")
-        print("   Pattern detection will still run, but alerts won't be sent.")
+        print("   Alerts won't be sent (pattern detection still runs).")
         telegram_bot = None
+
+    # Price report mode — send hourly ticker for all symbols
+    if args.price_report:
+        return run_price_report(binance_client, telegram_bot, symbols)
 
     results = []
     for symbol in symbols:

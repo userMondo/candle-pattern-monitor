@@ -2,11 +2,11 @@ name: Candle Pattern Monitor
 
 on:
   schedule:
-    # Run every 15 minutes — primary monitoring (all patterns)
+    # Pattern monitoring — every 15 minutes (GitHub fires within ~±15 min window)
     - cron: '*/15 * * * *'
-    # Run hourly — all patterns
+    # Pattern monitoring — hourly
     - cron: '0 * * * *'
-    # Run every 4 hours — full scan
+    # Pattern monitoring — every 4 hours
     - cron: '0 */4 * * *'
   workflow_dispatch:
     inputs:
@@ -15,7 +15,7 @@ on:
         required: false
         default: 'BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT'
       interval:
-        description: 'Kline interval (15m, 1h, or 4h)'
+        description: 'Kline interval (15m, 1h, 4h)'
         required: false
         default: '15m'
       focus:
@@ -27,8 +27,7 @@ jobs:
   monitor:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,21 +36,19 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install requests
 
       - name: Run candle pattern monitor
+        env:
+          SYMBOLS: ${{ inputs.symbols }}
+          INTERVAL: ${{ inputs.interval }}
+          FOCUS: ${{ inputs.focus }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
         run: |
-          # Use input values or fall back to defaults (cron runs get empty strings)
-          SYMBOLS="${{ inputs.symbols }}"
-          INTERVAL="${{ inputs.interval }}"
-          FOCUS="${{ inputs.focus }}"
-
-          # Apply defaults if inputs are empty (cron-triggered runs)
+          # Fallback defaults for cron-triggered runs (inputs come as empty strings)
           if [ -z "$SYMBOLS" ]; then SYMBOLS="BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"; fi
           if [ -z "$INTERVAL" ]; then INTERVAL="15m"; fi
 
           python main.py --symbols "$SYMBOLS" --interval "$INTERVAL" --focus "$FOCUS"
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
