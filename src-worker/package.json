@@ -1,0 +1,19 @@
+{
+  "name": "candle-pattern-monitor",
+  "version": "1.0.0",
+  "description": "24/7 candlestick pattern monitor on Cloudflare Workers with Telegram alerts",
+  "private": false,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0",
+    "wrangler": "^3.20.0"
+  },
+  "dependencies": {}
+}

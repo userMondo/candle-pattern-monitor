@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 venv/
 .env.local
+src-worker/node_modules/
+src-worker/.wrangler/
+src-worker/.vite/
+src-worker/wrangler.toml
