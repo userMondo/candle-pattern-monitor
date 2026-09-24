@@ -129,10 +129,13 @@ Default focus: **all patterns** (no filtering). Use `--focus` or `PATTERN_FOCUS`
 - ✅ `SECRETS_SETUP_GUIDE.md`: step-by-step guide for adding secrets
 
 ### Blocked — User Action Required
-- ❌ **GitHub secrets**: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` not set as repo secrets (PAT can't create secrets) — add via GitHub UI Settings → Secrets & Variables → Actions
+- ❌ **GitHub secrets** (RESOLVED): User revoked old tokens and set new `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` secrets via GitHub UI. Verified working — alerts sent successfully after 10:33 UTC.
+- ❌ **`.env` local token**: Still has old revoked token — user should update for local testing consistency
 
 ### Fixed This Round
 - ✅ **Cron empty inputs**: GitHub `schedule` events pass empty strings for `workflow_dispatch` inputs — FIXED with bash fallback defaults in workflow (commit `75e1959`)
+- ✅ **Telegram 401 error**: Old/revoked bot token — user set new secrets on GitHub, verified: 3 pattern alerts + price report sent successfully after 10:33 UTC
+- ✅ **Binance HTTP 451**: GitHub Actions IP blocked by Binance — FIXED with `api.binance.us` endpoint fallback
 
 ## Key Commands
 
