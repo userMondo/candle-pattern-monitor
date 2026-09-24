@@ -17,7 +17,9 @@ export class BinanceClient {
   }
 
   private async fetchWithFallback(path: string): Promise<any> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    };
     if (this.apiKey) {
       headers['X-MBX-APIKEY'] = this.apiKey;
     }
@@ -27,14 +29,15 @@ export class BinanceClient {
         const url = `${base}${path}`;
         const resp = await fetch(url, { headers });
         if (!resp.ok) {
-          // Try next endpoint on HTTP errors (451, 429, etc.)
-          if (resp.status === 451 || resp.status === 429) continue;
+          // Try next endpoint on HTTP errors (403, 451, 429, etc.)
+          if (resp.status === 403 || resp.status === 451 || resp.status === 429) continue;
           throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
         }
         return await resp.json();
       } catch (e) {
         // Try next endpoint on network errors
-        if (e instanceof Error && e.message.includes('fetch')) continue;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes('fetch') || msg.includes('HTTP 40') || msg.includes('HTTP 45')) continue;
         throw e;
       }
     }
