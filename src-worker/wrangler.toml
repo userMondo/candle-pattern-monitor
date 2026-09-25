@@ -4,10 +4,13 @@ compatibility_date = "2025-01-01"
 
 # Cron triggers — Cloudflare Workers fires these at exact second precision
 # Free tier allows up to 5 cron triggers per account (shared across all workers)
+# Single trigger handles ALL intervals via time-based routing in the scheduled() handler:
+#   - Every tick (*:00, *:15, *:30, *:45): 15m pattern check (always)
+#   - At :00 every hour:                   Price report (all pairs 24h summary)
+#   - At :15 every hour:                   1h pattern check
+#   - At :30 (every 4h, 00:30/04:30/...):  4h pattern check
 [triggers]
 crons = [
-  # Every 15 minutes: handles ALL monitoring (15m patterns + hourly price report + 1h/4h checks)
-  # The worker logic determines which actions to run based on current time
   "*/15 * * * *",
 ]
 

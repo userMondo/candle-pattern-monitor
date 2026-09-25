@@ -75,11 +75,17 @@ curl https://<your-sub>.workers.dev/price-report
 
 ## Schedule (Automatic)
 
-After deployment, Cloudflare automatically runs:
-- **Pattern monitor**: `*/15 * * * *` (every 15 minutes at exact second) → checks all patterns + sends Telegram alerts
-- **Price report**: `5 * * * *` (at :05 past each hour) → sends hourly 24h price summary
+After deployment, Cloudflare automatically runs a single cron trigger every 15 minutes.
+The worker handler routes each tick to the appropriate logic:
 
-These are defined in `wrangler.toml` under `[triggers]`.
+| Time (UTC) | What happens |
+|------------|-------------|
+| `*:00`, `*:15`, `*:30`, `*:45` | 15m pattern check (always) |
+| `*:00` of every hour | Hourly price report (all pairs 24h summary) |
+| `*:15` of every hour | 1h pattern check |
+| `*:30` at 00, 04, 08, 12, 16, 20 UTC | 4h pattern check |
+
+Cron: `*/15 * * * *` (single trigger — stays within Cloudflare's free tier limit of 5)
 
 ## Local Development
 
