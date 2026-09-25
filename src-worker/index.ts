@@ -8,7 +8,7 @@
 import { detectPatterns, formatPatternAlert, formatPriceReport, PatternResult } from './patterns';
 import { BinanceClient } from './binanceClient';
 import { TelegramBot } from './telegramBot';
-import type { Env, CandleData } from './types';
+import type { Env } from './types';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -21,7 +21,8 @@ export default {
     }
 
     if (url.pathname === '/run') {
-      return await handleManualRun(env);
+      const interval = url.searchParams.get('interval') || env.INTERVAL || '15m';
+      return await handleManualRun(env, interval);
     }
 
     if (url.pathname === '/price-report') {
@@ -31,39 +32,72 @@ export default {
     return new Response('Candle Pattern Monitor — use /run or /health', { status: 200 });
   },
 
-  // Cron handler — triggered by Cloudflare's scheduler
-  // CRON: */15 * * * * for patterns, 5 * * * * for price reports
+  // Cron handler — triggered every 15 minutes by Cloudflare's scheduler
+  // Inside this handler, we determine which intervals to check based on current time:
+  //   - Every 15m tick: always check 15m patterns
+  //   - At :05 of every hour: also send hourly price report
+  //   - At :20 of every hour: also check 1h patterns
+  //   - At :35 (only at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC): check 4h patterns
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     const now = new Date();
     const minute = now.getUTCMinutes();
+    const hour = now.getUTCHours();
+    const logMessages: string[] = [];
 
-    // Run price report at :05 of every hour
-    if (minute === 5) {
-      ctx.wait(await handlePriceReport(env));
-    } else {
-      // Pattern monitoring on all other cron ticks
-      ctx.wait(await handleManualRun(env));
+    // Always: 15m pattern check
+    const result15m = await handleManualRun(env, '15m');
+    const body15m = await result15m.clone().text();
+    const data15m = JSON.parse(body15m);
+    logMessages.push(`15m: ${data15m.alertsSent} alerts`);
+
+    // Price report at :05 of every hour
+    if (minute === 0 || minute === 15 || minute === 30 || minute === 45) {
+      // Run price report at every 15m tick (staggered, but always runs)
+      // Actually, only at :05 — but since we run at :00/:15/:30/:45, let's use :00
+      if (minute === 0) {
+        const resultPrice = await handlePriceReport(env);
+        const bodyPrice = await resultPrice.clone().text();
+        logMessages.push(`price-report: ${bodyPrice.substring(0, 100)}`);
+      }
     }
+
+    // 1h pattern check at :20 (closest to */15 that makes sense)
+    if (minute === 15) {
+      const result1h = await handleManualRun(env, '1h');
+      const body1h = await result1h.clone().text();
+      const data1h = JSON.parse(body1h);
+      logMessages.push(`1h: ${data1h.alertsSent} alerts`);
+    }
+
+    // 4h pattern check at :30, only at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC
+    if (minute === 30 && hour % 4 === 0) {
+      const result4h = await handleManualRun(env, '4h');
+      const body4h = await result4h.clone().text();
+      const data4h = JSON.parse(body4h);
+      logMessages.push(`4h: ${data4h.alertsSent} alerts`);
+    }
+
+    console.log(`[cron] ${now.toISOString()} → ${logMessages.join(' | ')}`);
   },
 };
 
-async function handleManualRun(env: Env): Promise<Response> {
+async function handleManualRun(env: Env, interval: string = '15m'): Promise<Response> {
   const symbols = (env.WATCHLIST_SYMBOLS || 'BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT')
     .split(',').map(s => s.trim()).filter(Boolean);
-  const interval = env.INTERVAL || '15m';
   const focus = env.PATTERN_FOCUS || '';
 
   const binance = new BinanceClient(env.BINANCE_API_KEY);
   const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID);
 
   let alertsSent = 0;
-  const results: Array<{ symbol: string; patterns: PatternResult[]; sent: boolean }> = [];
+  const results: Array<{ symbol: string; interval: string; patterns: PatternResult[]; sent: boolean }> = [];
 
   for (const symbol of symbols) {
     try {
       const candles = await binance.getKlines(symbol, interval, 50);
       if (!candles || candles.length < 3) continue;
 
+      // Filter to closed candles only
       const closed = candles.filter(c => c.isClosed);
       if (closed.length < 3) continue;
 
@@ -74,7 +108,7 @@ async function handleManualRun(env: Env): Promise<Response> {
       const alert = formatPatternAlert(symbol, interval, patterns, latest);
       const sent = await bot.sendMessage(alert);
 
-      results.push({ symbol, patterns, sent });
+      results.push({ symbol, interval, patterns, sent });
       if (sent) alertsSent++;
     } catch (e) {
       console.error(`Error checking ${symbol}:`, e);

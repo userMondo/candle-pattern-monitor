@@ -3,15 +3,15 @@ main = "./index.ts"
 compatibility_date = "2025-01-01"
 
 # Cron triggers — Cloudflare Workers fires these at exact second precision
+# Free tier allows up to 5 cron triggers per account (shared across all workers)
 [triggers]
 crons = [
-  # Pattern monitoring: every 15 minutes (pattern detection + alerts)
+  # Every 15 minutes: handles ALL monitoring (15m patterns + hourly price report + 1h/4h checks)
+  # The worker logic determines which actions to run based on current time
   "*/15 * * * *",
-  # Hourly price report: at :05 past each hour
-  "5 * * * *",
 ]
 
-# Environment variables (set via wrangler secret put or dashboard)
+# Environment variables
 [vars]
 WATCHLIST_SYMBOLS = "BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"
 INTERVAL = "15m"
@@ -19,4 +19,4 @@ INTERVAL = "15m"
 # Secrets (set via `wrangler secret put`):
 # - TELEGRAM_BOT_TOKEN = <your bot token>
 # - TELEGRAM_CHAT_ID = <your chat id>
-# - BINANCE_API_KEY = <optional, for higher rate limits>
+# - BINANCE_API_KEY = <optional>
