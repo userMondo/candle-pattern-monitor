@@ -16,7 +16,7 @@ crons = [
 
 # Environment variables
 [vars]
-WATCHLIST_SYMBOLS = "BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT"
+WATCHLIST_SYMBOLS = "BTCUSDT,NEARUSDT,ZECUSDT,PAXGUSDT,HYPEUSDT"
 INTERVAL = "15m"
 
 # Secrets (set via `wrangler secret put`):
